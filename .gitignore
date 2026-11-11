@@ -1,0 +1,22 @@
+# Python
+backend/uploads/
+venv/
+env/
+__pycache__/
+*.pyc
+*.db
+*.sqlite3
+
+
+# React / Node
+node_modules/
+build/
+dist/
+
+
+# IDE
+.vscode/
+.idea/
+
+android/
+ios/
