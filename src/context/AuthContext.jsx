@@ -44,15 +44,19 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  const persist = (access_token, userData) => {
+    localStorage.setItem('token', access_token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+  };
+
   const login = async (email, password) => {
     try {
       const res = await authAPI.login(email, password);
       const { access_token, user: userData } = res.data;
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
+      persist(access_token, userData);
       toast.success('Welcome back!');
-      return { success: true };
+      return { success: true, user: userData };
     } catch (err) {
       toast.error(err.response?.data?.error || 'Login failed');
       return { success: false };
@@ -63,13 +67,26 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await authAPI.register(data);
       const { access_token, user: userData } = res.data;
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
+      persist(access_token, userData);
       toast.success('Account created!');
-      return { success: true };
+      return { success: true, user: userData };
     } catch (err) {
       toast.error(err.response?.data?.error || 'Registration failed');
+      return { success: false };
+    }
+  };
+
+  // NEW — Google sign-in
+  const loginWithGoogle = async (idToken) => {
+    try {
+      const res = await authAPI.googleLogin(idToken);
+      const { access_token, user: userData, new_user } = res.data;
+      persist(access_token, userData);
+      if (new_user) toast.success('Account created — welcome!');
+      else toast.success('Welcome back!');
+      return { success: true, user: userData, new_user };
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Google sign-in failed');
       return { success: false };
     }
   };
@@ -82,7 +99,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, api }}>
+    <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, logout, api }}>
       {children}
     </AuthContext.Provider>
   );

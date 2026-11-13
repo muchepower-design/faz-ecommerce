@@ -14,7 +14,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Auth (same endpoints as tickets/main systems — shared user pool)
 const authAxios = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
@@ -28,9 +27,10 @@ authAxios.interceptors.request.use((config) => {
 export const authAPI = {
   login: (email, password) => authAxios.post('/api/ticketing/auth/login', { email, password }),
   register: (data) => authAxios.post('/api/ticketing/auth/register', data),
+  // NEW — Google sign-in
+  googleLogin: (idToken) => authAxios.post('/api/auth/google', { id_token: idToken }),
 };
 
-// Public e-commerce
 export const shopAPI = {
   listAdverts: (params) => api.get('/ecommerce/adverts', { params }),
   getAdvert: (id) => api.get(`/ecommerce/adverts/${id}`),
@@ -41,7 +41,6 @@ export const shopAPI = {
   getSettings: () => api.get('/ecommerce/settings/public'),
 };
 
-// Consumer orders + payment
 export const orderAPI = {
   checkout: (data) => api.post('/ecommerce/checkout', data),
   getByNumber: (orderNumber) => api.get(`/ecommerce/orders/${orderNumber}`),

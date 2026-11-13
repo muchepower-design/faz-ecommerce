@@ -1,0 +1,2176 @@
+================================================================================
+PROJECT FILE EXPORT
+================================================================================
+
+
+====================================================================================================
+FILE: .env
+====================================================================================================
+
+VITE_API_URL=https://www.server.faz.kanchtech.com
+VITE_API_FRONTEND_MAIN=https://www.faz.kanchtech.com
+VITE_API_FRONTEND_TICKETS=https://www.tickets.faz.kanchtech.com
+VITE_SHOP_URL=https://shop.faz.kanchtech.com
+
+
+====================================================================================================
+FILE: .env.production
+====================================================================================================
+
+
+
+
+====================================================================================================
+FILE: .gitattributes
+====================================================================================================
+
+# Auto detect text files and perform LF normalization
+* text=auto
+
+
+
+====================================================================================================
+FILE: .gitignore
+====================================================================================================
+
+# Python
+backend/uploads/
+venv/
+env/
+__pycache__/
+*.pyc
+*.db
+*.sqlite3
+
+
+# React / Node
+node_modules/
+build/
+dist/
+
+
+# IDE
+.vscode/
+.idea/
+
+android/
+ios/
+
+
+
+====================================================================================================
+FILE: index.html
+====================================================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/src/assets/logo/faz logo.jpg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FAZ Shop | Official E-commerce</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+
+
+====================================================================================================
+FILE: package.json
+====================================================================================================
+
+{
+  "name": "faz-shop",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "framer-motion": "^11.11.0",
+    "lucide-react": "^0.451.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.4.1",
+    "react-icons": "^5.3.0",
+    "react-router-dom": "^6.26.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.10",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "vite": "^5.4.8"
+  }
+}
+
+
+====================================================================================================
+FILE: postcss.config.js
+====================================================================================================
+
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+
+
+====================================================================================================
+FILE: tailwind.config.js
+====================================================================================================
+
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        'faz-green': '#198A35',
+        'faz-orange': '#EF7E12',
+        'faz-red': '#CE1126',
+        'faz-black': '#000000',
+      },
+      fontFamily: {
+        sans: ['Poppins', 'system-ui', 'sans-serif'],
+      },
+    },
+  },
+  plugins: [],
+}
+
+
+====================================================================================================
+FILE: vite.config.js
+====================================================================================================
+
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  server: { port: 5174 },
+})
+
+
+====================================================================================================
+FILE: src\App.jsx
+====================================================================================================
+
+// src/App.jsx
+import { Routes, Route } from 'react-router-dom';
+import MainLayout from './layouts/MainLayout';
+import Home from './pages/Home';
+import Browse from './pages/Browse';
+import VendorPage from './pages/VendorPage';
+import AdvertDetail from './pages/AdvertDetail';
+import Checkout from './pages/Checkout';
+import PaymentPage from './pages/PaymentPage';
+import OrderTracking from './pages/OrderTracking';
+import MyOrders from './pages/MyOrders';
+import Login from './pages/Login';
+import Register from './pages/Register';
+
+export default function App() {
+  return (
+    <MainLayout>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/browse" element={<Browse />} />
+        <Route path="/vendor/:vendorId" element={<VendorPage />} />
+        <Route path="/advert/:advertId" element={<AdvertDetail />} />
+        <Route path="/checkout/:advertId" element={<Checkout />} />
+        <Route path="/pay/:orderNumber" element={<PaymentPage />} />
+        <Route path="/order/:orderNumber" element={<OrderTracking />} />
+        <Route path="/orders" element={<MyOrders />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Routes>
+    </MainLayout>
+  );
+}
+
+
+====================================================================================================
+FILE: src\api.js
+====================================================================================================
+
+// src/api.js
+import axios from 'axios';
+
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
+const api = axios.create({
+  baseURL: `${API_BASE}/api`,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+// Auth (same endpoints as tickets/main systems — shared user pool)
+const authAxios = axios.create({
+  baseURL: API_BASE,
+  headers: { 'Content-Type': 'application/json' },
+});
+authAxios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+export const authAPI = {
+  login: (email, password) => authAxios.post('/api/ticketing/auth/login', { email, password }),
+  register: (data) => authAxios.post('/api/ticketing/auth/register', data),
+};
+
+// Public e-commerce
+export const shopAPI = {
+  listAdverts: (params) => api.get('/ecommerce/adverts', { params }),
+  getAdvert: (id) => api.get(`/ecommerce/adverts/${id}`),
+  getMatchAdverts: (matchId) => api.get(`/ecommerce/matches/${matchId}/adverts`),
+  listCategories: () => api.get('/ecommerce/categories'),
+  listVendors: (params) => api.get('/ecommerce/vendors', { params }),
+  getVendor: (id) => api.get(`/ecommerce/vendors/${id}`),
+  getSettings: () => api.get('/ecommerce/settings/public'),
+};
+
+// Consumer orders + payment
+export const orderAPI = {
+  checkout: (data) => api.post('/ecommerce/checkout', data),
+  getByNumber: (orderNumber) => api.get(`/ecommerce/orders/${orderNumber}`),
+  listMyOrders: () => api.get('/ecommerce/orders'),
+  confirmReceipt: (orderNumber) => api.put(`/ecommerce/orders/${orderNumber}/confirm-receipt`),
+  getProviders: () => api.get('/ecommerce/payment/providers'),
+  initiatePayment: (data) => api.post('/ecommerce/payment/initiate', data),
+  checkStatus: (depositId) => api.get(`/ecommerce/payment/deposit/${depositId}/check`),
+};
+
+export default api;
+
+
+====================================================================================================
+FILE: src\index.css
+====================================================================================================
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { font-family: 'Poppins', system-ui, sans-serif; }
+  body { @apply bg-gray-50 text-gray-800; }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/90 backdrop-blur-md border border-gray-200 rounded-xl shadow-sm;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-gradient-to-r from-faz-green to-faz-orange hover:from-faz-orange hover:to-faz-red text-white font-semibold px-6 py-3 rounded-lg transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 border-2 border-gray-300 text-gray-700 font-medium px-5 py-2.5 rounded-lg hover:border-faz-orange hover:text-faz-orange transition;
+  }
+  .gradient-text {
+    @apply bg-gradient-to-r from-faz-green via-faz-orange to-faz-red bg-clip-text text-transparent;
+  }
+  .input-field {
+    @apply w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-faz-orange/30 focus:border-faz-orange;
+  }
+}
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { @apply bg-gray-100; }
+::-webkit-scrollbar-thumb { @apply bg-gray-400 rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-gray-500; }
+
+
+====================================================================================================
+FILE: src\main.jsx
+====================================================================================================
+
+// src/main.jsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import App from './App';
+import { AuthProvider } from './context/AuthContext';
+import './index.css';
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <AuthProvider>
+        <Toaster position="top-right" />
+        <App />
+      </AuthProvider>
+    </BrowserRouter>
+  </React.StrictMode>,
+);
+
+
+====================================================================================================
+FILE: src\utils.js
+====================================================================================================
+
+// src/utils.js
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
+export function resolveImageUrl(url) {
+  if (!url) return '';
+  if (/^(https?:|data:|blob:)/i.test(url)) return url;
+  return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
+
+====================================================================================================
+FILE: src\components\ui.jsx
+====================================================================================================
+
+// src/components/ui.jsx
+export function Button({ children, variant = 'primary', size = 'md', loading, className = '', ...props }) {
+  const sizes = { sm: 'px-3 py-1.5 text-sm', md: 'px-5 py-2.5 text-sm', lg: 'px-7 py-3 text-base' };
+  const base = 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed';
+  const variants = {
+    primary: 'bg-gradient-to-r from-faz-green to-faz-orange hover:from-faz-orange hover:to-faz-red text-white shadow-md',
+    outline: 'border-2 border-gray-300 text-gray-700 hover:border-faz-orange hover:text-faz-orange',
+    danger: 'bg-faz-red text-white hover:bg-red-700',
+    ghost: 'text-gray-600 hover:bg-gray-100',
+  };
+  return (
+    <button
+      disabled={loading || props.disabled}
+      className={`${base} ${sizes[size]} ${variants[variant]} ${className}`}
+      {...props}
+    >
+      {loading ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : null}
+      {children}
+    </button>
+  );
+}
+
+export function Card({ children, className = '', padding = 'md' }) {
+  const pad = { sm: 'p-3', md: 'p-5', lg: 'p-7' }[padding];
+  return <div className={`bg-white border border-gray-200 rounded-2xl shadow-sm ${pad} ${className}`}>{children}</div>;
+}
+
+export function Input({ label, error, hint, className = '', ...props }) {
+  return (
+    <div className={className}>
+      {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
+      <input className="input-field" {...props} />
+      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+      {hint && !error && <p className="text-xs text-gray-500 mt-1">{hint}</p>}
+    </div>
+  );
+}
+
+export function Textarea({ label, rows = 3, className = '', ...props }) {
+  return (
+    <div className={className}>
+      {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
+      <textarea rows={rows} className="input-field" {...props} />
+    </div>
+  );
+}
+
+export function Select({ label, children, className = '', ...props }) {
+  return (
+    <div className={className}>
+      {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
+      <select className="input-field" {...props}>{children}</select>
+    </div>
+  );
+}
+
+export function Badge({ children, variant = 'default' }) {
+  const v = {
+    default: 'bg-gray-100 text-gray-700',
+    success: 'bg-green-100 text-green-700',
+    warning: 'bg-yellow-100 text-yellow-700',
+    danger: 'bg-red-100 text-red-700',
+    orange: 'bg-orange-100 text-orange-700',
+    brand: 'bg-gradient-to-r from-faz-green to-faz-orange text-white',
+  }[variant];
+  return <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${v}`}>{children}</span>;
+}
+
+export function Spinner({ size = 'md', className = '' }) {
+  const sizes = { sm: 'w-4 h-4 border-2', md: 'w-8 h-8 border-2', lg: 'w-12 h-12 border-3', xl: 'w-16 h-16 border-4' };
+  return (
+    <div className={`${sizes[size]} border-faz-green border-t-faz-orange rounded-full animate-spin ${className}`} />
+  );
+}
+
+export function EmptyState({ icon = '📭', title, description, action }) {
+  return (
+    <div className="text-center py-16">
+      <div className="text-6xl mb-3">{icon}</div>
+      <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+      {description && <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">{description}</p>}
+      {action && <div className="mt-4">{action}</div>}
+    </div>
+  );
+}
+
+
+====================================================================================================
+FILE: src\context\AuthContext.jsx
+====================================================================================================
+
+// src/context/AuthContext.jsx
+import { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
+import toast from 'react-hot-toast';
+import { authAPI } from '../api';
+
+const AuthContext = createContext();
+export const useAuth = () => useContext(AuthContext);
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+const api = axios.create({ baseURL: API_URL });
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const stored = localStorage.getItem('user');
+    if (token && stored) {
+      try {
+        setUser(JSON.parse(stored));
+        api.get('/api/ticketing/auth/me')
+          .then((res) => {
+            const fresh = res.data;
+            setUser(fresh);
+            localStorage.setItem('user', JSON.stringify(fresh));
+          })
+          .catch(() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            setUser(null);
+          });
+      } catch {
+        setUser(null);
+      }
+    }
+    setLoading(false);
+  }, []);
+
+  const login = async (email, password) => {
+    try {
+      const res = await authAPI.login(email, password);
+      const { access_token, user: userData } = res.data;
+      localStorage.setItem('token', access_token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      toast.success('Welcome back!');
+      return { success: true };
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Login failed');
+      return { success: false };
+    }
+  };
+
+  const register = async (data) => {
+    try {
+      const res = await authAPI.register(data);
+      const { access_token, user: userData } = res.data;
+      localStorage.setItem('token', access_token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      toast.success('Account created!');
+      return { success: true };
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Registration failed');
+      return { success: false };
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    toast.success('Logged out');
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, loading, login, register, logout, api }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+
+====================================================================================================
+FILE: src\layouts\MainLayout.jsx
+====================================================================================================
+
+// src/layouts/MainLayout.jsx
+import { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { FaShoppingBag, FaUserCircle, FaSignOutAlt, FaSearch, FaBars, FaTimes, FaFacebookF, FaYoutube, FaInstagram, FaEnvelope, FaPhone } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
+import logoImage from '../pages/assets/logo/faz logo.jpg'; // adjust if needed
+
+const MAIN = import.meta.env.VITE_API_FRONTEND_MAIN || '#';
+const TICKETS = import.meta.env.VITE_API_FRONTEND_TICKETS || '#';
+
+export default function MainLayout({ children }) {
+  const { user, logout } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const submitSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/browse?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+      setMobileOpen(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Top bar */}
+      <div className="bg-faz-black text-white text-xs">
+        <div className="container mx-auto px-4 py-2 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <a href="https://web.facebook.com/FootballAssociationZambia" target="_blank" rel="noopener noreferrer" className="hover:text-faz-orange"><FaFacebookF /></a>
+            <a href="https://x.com/FAZFootball" target="_blank" rel="noopener noreferrer" className="hover:text-faz-orange"><FaXTwitter /></a>
+            <a href="https://www.youtube.com/@FAZTVOfficial" target="_blank" rel="noopener noreferrer" className="hover:text-faz-orange"><FaYoutube /></a>
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-faz-orange"><FaInstagram /></a>
+          </div>
+          <div className="hidden md:flex items-center gap-4">
+            <a href="tel:+260211123456" className="hover:text-faz-orange flex items-center gap-1"><FaPhone size={10} /> +260 211 123456</a>
+            <a href="mailto:shop@faz.zm" className="hover:text-faz-orange flex items-center gap-1"><FaEnvelope size={10} /> shop@faz.zm</a>
+          </div>
+        </div>
+      </div>
+
+      {/* Main nav */}
+      <header className="bg-white shadow-sm sticky top-0 z-40">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          <Link to="/" className="flex items-center gap-2 flex-shrink-0">
+            <div className="w-10 h-10 bg-gradient-to-br from-faz-green to-faz-orange rounded-full overflow-hidden flex items-center justify-center">
+              <img src={logoImage} alt="FAZ" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold gradient-text leading-tight">FAZ Shop</h1>
+              <p className="text-[10px] text-gray-500 -mt-0.5">Football Association of Zambia</p>
+            </div>
+          </Link>
+
+          <form onSubmit={submitSearch} className="hidden md:flex flex-1 max-w-xl">
+            <div className="relative w-full">
+              <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products, vendors, services…"
+                className="w-full pl-10 pr-4 py-2 bg-gray-100 border border-transparent focus:bg-white focus:border-faz-orange rounded-lg text-sm outline-none transition"
+              />
+            </div>
+          </form>
+
+          <div className="flex items-center gap-2">
+            <Link to="/browse" className="hidden lg:block text-sm text-gray-700 hover:text-faz-orange font-medium px-3 py-2">Browse</Link>
+            <a href={TICKETS} target="_blank" rel="noopener noreferrer" className="hidden lg:block text-sm text-gray-700 hover:text-faz-orange font-medium px-3 py-2">Tickets</a>
+            <a href={MAIN} target="_blank" rel="noopener noreferrer" className="hidden lg:block text-sm text-gray-700 hover:text-faz-orange font-medium px-3 py-2">FAZ Home</a>
+
+            {user ? (
+              <div className="flex items-center gap-2">
+                <Link to="/orders" className="text-sm text-gray-700 hover:text-faz-orange px-3 py-2">My Orders</Link>
+                <div className="relative group">
+                  <button className="w-9 h-9 rounded-full bg-gradient-to-br from-faz-green to-faz-orange text-white flex items-center justify-center font-bold">
+                    {(user.first_name?.[0] || user.email?.[0] || 'U').toUpperCase()}
+                  </button>
+                  <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                    <button onClick={logout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg">
+                      <FaSignOutAlt className="inline mr-2" /> Sign Out
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="hidden md:flex items-center gap-2">
+                <Link to="/login" className="text-sm text-gray-700 hover:text-faz-orange px-3 py-2">Login</Link>
+                <Link to="/register" className="text-sm font-medium text-white bg-gradient-to-r from-faz-orange to-faz-red px-4 py-2 rounded-lg hover:opacity-90 transition">Sign Up</Link>
+              </div>
+            )}
+
+            <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 text-gray-700">
+              {mobileOpen ? <FaTimes /> : <FaBars />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile menu */}
+        {mobileOpen && (
+          <div className="md:hidden border-t border-gray-200 bg-white px-4 py-3 space-y-2">
+            <form onSubmit={submitSearch} className="mb-2">
+              <div className="relative">
+                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search…"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-lg text-sm outline-none"
+                />
+              </div>
+            </form>
+            <Link to="/browse" onClick={() => setMobileOpen(false)} className="block py-2 text-sm">Browse</Link>
+            <a href={TICKETS} target="_blank" rel="noopener noreferrer" className="block py-2 text-sm">Tickets</a>
+            <a href={MAIN} target="_blank" rel="noopener noreferrer" className="block py-2 text-sm">FAZ Home</a>
+            {!user && (
+              <>
+                <Link to="/login" onClick={() => setMobileOpen(false)} className="block py-2 text-sm">Login</Link>
+                <Link to="/register" onClick={() => setMobileOpen(false)} className="block py-2 text-sm">Register</Link>
+              </>
+            )}
+            {user && (
+              <Link to="/orders" onClick={() => setMobileOpen(false)} className="block py-2 text-sm">My Orders</Link>
+            )}
+          </div>
+        )}
+      </header>
+
+      <main className="flex-1">{children}</main>
+
+      <footer className="bg-gray-900 text-white mt-16">
+        <div className="container mx-auto px-4 py-10 grid md:grid-cols-4 gap-8">
+          <div>
+            <h3 className="font-bold text-lg gradient-text mb-2">FAZ Shop</h3>
+            <p className="text-sm text-gray-400">The official e-commerce platform of the Football Association of Zambia.</p>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-3">Shop</h4>
+            <ul className="space-y-1 text-sm text-gray-400">
+              <li><Link to="/browse" className="hover:text-faz-orange">Browse All</Link></li>
+              <li><Link to="/browse?premium=true" className="hover:text-faz-orange">Featured</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-3">FAZ</h4>
+            <ul className="space-y-1 text-sm text-gray-400">
+              <li><a href={MAIN} className="hover:text-faz-orange">Main Website</a></li>
+              <li><a href={TICKETS} className="hover:text-faz-orange">Buy Tickets</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-3">Contact</h4>
+            <ul className="space-y-1 text-sm text-gray-400">
+              <li>Football House, Lusaka</li>
+              <li>shop@faz.zm</li>
+              <li>+260 211 123 456</li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-gray-800 py-4 text-center text-xs text-gray-500">
+          © {new Date().getFullYear()} Football Association of Zambia. All rights reserved.
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+
+====================================================================================================
+FILE: src\pages\AdvertDetail.jsx
+====================================================================================================
+
+// src/pages/AdvertDetail.jsx
+import { useEffect, useState } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { shopAPI } from '../api';
+import { Card, Button, Badge, Spinner, EmptyState } from '../components/ui';
+import { resolveImageUrl } from '../utils';
+import { FaMapMarkerAlt, FaPhone, FaEnvelope, FaWhatsapp, FaPlay, FaTimes, FaArrowLeft } from 'react-icons/fa';
+
+export default function AdvertDetail() {
+  const { advertId } = useParams();
+  const navigate = useNavigate();
+  const [advert, setAdvert] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeMedia, setActiveMedia] = useState(0);
+  const [lightbox, setLightbox] = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    shopAPI.getAdvert(advertId)
+      .then((res) => setAdvert(res.data))
+      .catch(() => setAdvert(null))
+      .finally(() => setLoading(false));
+  }, [advertId]);
+
+  if (loading) return <div className="flex justify-center py-32"><Spinner size="xl" /></div>;
+
+  if (!advert) {
+    return (
+      <div className="container mx-auto px-4 py-20">
+        <EmptyState
+          icon="🔍"
+          title="Product not found"
+          description="This advert may have been removed or is no longer available."
+          action={<Link to="/browse"><Button>Browse other products</Button></Link>}
+        />
+      </div>
+    );
+  }
+
+  const media = advert.media || [];
+  const currentMedia = media[activeMedia];
+  const vendor = advert.vendor;
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <Link to="/browse" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-faz-orange mb-4">
+        <FaArrowLeft /> Back to browse
+      </Link>
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Media */}
+        <div>
+          <div className="bg-gray-100 rounded-2xl overflow-hidden aspect-square relative cursor-zoom-in"
+               onClick={() => currentMedia && setLightbox(currentMedia)}>
+            {currentMedia ? (
+              currentMedia.media_type === 'video' ? (
+                <video src={resolveImageUrl(currentMedia.url)} controls className="w-full h-full object-contain" />
+              ) : (
+                <img src={resolveImageUrl(currentMedia.url)} alt={advert.title} className="w-full h-full object-cover" />
+              )
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-8xl text-gray-300">🛍️</div>
+            )}
+          </div>
+
+          {media.length > 1 && (
+            <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
+              {media.map((m, i) => (
+                <button key={m.id} onClick={() => setActiveMedia(i)}
+                  className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition ${i === activeMedia ? 'border-faz-orange' : 'border-gray-200'}`}>
+                  {m.media_type === 'video' ? (
+                    <div className="w-full h-full bg-gray-900 flex items-center justify-center text-white">
+                      <FaPlay />
+                    </div>
+                  ) : (
+                    <img src={resolveImageUrl(m.url)} alt="" className="w-full h-full object-cover" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Info + Buy */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            {advert.is_premium && <Badge variant="orange">Premium</Badge>}
+            {advert.category && <Badge>{advert.category.icon} {advert.category.name}</Badge>}
+          </div>
+
+          <h1 className="text-3xl font-bold text-gray-800 mb-3">{advert.title}</h1>
+
+          {advert.price != null ? (
+            <div className="mb-4">
+              <span className="text-4xl font-bold text-faz-green">{advert.currency} {Number(advert.price).toFixed(2)}</span>
+            </div>
+          ) : (
+            <div className="mb-4 text-2xl font-semibold text-gray-500 italic">Contact vendor for price</div>
+          )}
+
+          {advert.location_name && (
+            <p className="text-sm text-gray-600 mb-4 flex items-center gap-2">
+              <FaMapMarkerAlt className="text-faz-orange" /> {advert.location_name}
+            </p>
+          )}
+
+          <div className="prose prose-sm max-w-none text-gray-700 mb-6 whitespace-pre-wrap">
+            {advert.description}
+          </div>
+
+          {/* Buy */}
+          <Card padding="md" className="mb-6">
+            <h3 className="font-semibold text-gray-800 mb-3">Purchase</h3>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button onClick={() => navigate(`/checkout/${advert.id}`)} size="lg" className="flex-1">
+                Buy Now
+              </Button>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              {advert.payment_method === 'offline' && 'Pay the vendor directly (bank or mobile money).'}
+              {advert.payment_method === 'system' && 'Pay securely through the FAZ platform.'}
+              {advert.payment_method === 'both' && 'Choose to pay via FAZ platform or directly to the vendor at checkout.'}
+            </p>
+          </Card>
+
+          {/* Vendor */}
+          {vendor && (
+            <Card padding="md">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Sold by</h3>
+              <Link to={`/vendor/${vendor.id}`} className="flex items-center gap-3 hover:bg-gray-50 rounded-lg p-2 -m-2 transition">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-faz-green to-faz-orange overflow-hidden flex items-center justify-center text-white font-bold">
+                  {vendor.logo_url ? (
+                    <img src={resolveImageUrl(vendor.logo_url)} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    vendor.business_name?.[0]
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-800">{vendor.business_name}</p>
+                  {vendor.location_name && <p className="text-xs text-gray-500">{vendor.location_name}</p>}
+                </div>
+              </Link>
+
+              <div className="mt-4 space-y-1 text-sm">
+                {vendor.contact_phone && (
+                  <a href={`tel:${vendor.contact_phone}`} className="flex items-center gap-2 text-gray-600 hover:text-faz-orange">
+                    <FaPhone /> {vendor.contact_phone}
+                  </a>
+                )}
+                {vendor.contact_email && (
+                  <a href={`mailto:${vendor.contact_email}`} className="flex items-center gap-2 text-gray-600 hover:text-faz-orange">
+                    <FaEnvelope /> {vendor.contact_email}
+                  </a>
+                )}
+                {vendor.contact_whatsapp && (
+                  <a href={`https://wa.me/${vendor.contact_whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-600 hover:text-green-600">
+                    <FaWhatsapp /> WhatsApp
+                  </a>
+                )}
+              </div>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Lightbox */}
+      {lightbox && lightbox.media_type === 'image' && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
+          <button onClick={() => setLightbox(null)} className="absolute top-4 right-4 text-white text-3xl p-2 hover:bg-white/10 rounded-full">
+            <FaTimes />
+          </button>
+          <img src={resolveImageUrl(lightbox.url)} alt="" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+====================================================================================================
+FILE: src\pages\Browse.jsx
+====================================================================================================
+
+// src/pages/Browse.jsx
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { shopAPI } from '../api';
+import { Card, Spinner, EmptyState } from '../components/ui';
+import { resolveImageUrl } from '../utils';
+import { FaFilter } from 'react-icons/fa';
+
+export default function Browse() {
+  const [params, setParams] = useSearchParams();
+  const [adverts, setAdverts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const categorySlug = params.get('category') || '';
+  const query = params.get('q') || '';
+  const premium = params.get('premium') === 'true';
+
+  useEffect(() => {
+    shopAPI.listCategories().then((res) => setCategories(res.data || []));
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    shopAPI.listAdverts({
+      category: categorySlug || undefined,
+      q: query || undefined,
+      premium: premium || undefined,
+      limit: 60,
+    })
+      .then((res) => setAdverts(res.data?.items || []))
+      .catch(() => setAdverts([]))
+      .finally(() => setLoading(false));
+  }, [categorySlug, query, premium]);
+
+  const setFilter = (key, value) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    setParams(next);
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold gradient-text mb-1">
+          {premium ? 'Featured at Matches' : categorySlug ? 'Category' : 'All Products'}
+        </h1>
+        <p className="text-sm text-gray-500">
+          {adverts.length} product{adverts.length !== 1 ? 's' : ''} {query ? `matching "${query}"` : ''}
+        </p>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Filters */}
+        <aside className="lg:w-64 flex-shrink-0">
+          <Card padding="md">
+            <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><FaFilter /> Filters</h3>
+            <div className="space-y-2">
+              <button onClick={() => setFilter('category', '')}
+                className={`block w-full text-left px-3 py-2 rounded-lg text-sm transition ${!categorySlug ? 'bg-faz-orange text-white' : 'hover:bg-gray-100'}`}>
+                All Categories
+              </button>
+              {categories.map((c) => (
+                <button key={c.id} onClick={() => setFilter('category', c.slug)}
+                  className={`block w-full text-left px-3 py-2 rounded-lg text-sm transition ${categorySlug === c.slug ? 'bg-faz-orange text-white' : 'hover:bg-gray-100'}`}>
+                  {c.icon} {c.name}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4 pt-4 border-t">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={premium} onChange={(e) => setFilter('premium', e.target.checked ? 'true' : '')} />
+                Featured only
+              </label>
+            </div>
+
+            {(categorySlug || premium || query) && (
+              <button onClick={() => setParams(new URLSearchParams())}
+                className="w-full mt-3 text-xs text-red-600 hover:underline">
+                Clear filters
+              </button>
+            )}
+          </Card>
+        </aside>
+
+        {/* Results */}
+        <div className="flex-1">
+          {loading ? (
+            <div className="flex justify-center py-20"><Spinner size="xl" /></div>
+          ) : adverts.length === 0 ? (
+            <EmptyState icon="🔍" title="Nothing found" description="Try adjusting filters or searching for something else." />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {adverts.map((a) => (
+                <Link key={a.id} to={`/advert/${a.id}`}>
+                  <div className="group bg-white rounded-xl overflow-hidden border border-gray-200 hover:shadow-xl transition h-full flex flex-col">
+                    <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
+                      {a.cover_image ? (
+                        <img src={resolveImageUrl(a.cover_image)} alt={a.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-4xl text-gray-300">🛍️</div>
+                      )}
+                    </div>
+                    <div className="p-4 flex-1 flex flex-col">
+                      <h3 className="font-semibold text-gray-800 line-clamp-2 mb-1">{a.title}</h3>
+                      {a.vendor?.business_name && (
+                        <p className="text-xs text-gray-500 mb-2">{a.vendor.business_name}</p>
+                      )}
+                      {a.location_name && <p className="text-xs text-gray-400 mb-2">📍 {a.location_name}</p>}
+                      <div className="mt-auto flex justify-between items-center">
+                        {a.price != null ? (
+                          <span className="text-lg font-bold text-faz-green">{a.currency} {Number(a.price).toFixed(2)}</span>
+                        ) : (
+                          <span className="text-sm text-gray-400 italic">Contact for price</span>
+                        )}
+                        {a.is_premium && <span className="text-[10px] font-bold bg-faz-orange text-white px-2 py-0.5 rounded-full">PREMIUM</span>}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+====================================================================================================
+FILE: src\pages\Checkout.jsx
+====================================================================================================
+
+// src/pages/Checkout.jsx
+import { useEffect, useState } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { shopAPI, orderAPI } from '../api';
+import { useAuth } from '../context/AuthContext';
+import { Card, Button, Input, Textarea, Spinner, Badge } from '../components/ui';
+import { resolveImageUrl } from '../utils';
+import { FaArrowLeft } from 'react-icons/fa';
+
+export default function Checkout() {
+  const { advertId } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const [advert, setAdvert] = useState(null);
+  const [settings, setSettings] = useState({ platform_fee_percent: 0, default_currency: 'ZMW' });
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [form, setForm] = useState({
+    quantity: 1,
+    customer_name: '',
+    customer_email: '',
+    customer_phone: '',
+    delivery_address: '',
+    delivery_notes: '',
+    payment_method: 'system',
+  });
+
+  useEffect(() => {
+    Promise.all([shopAPI.getAdvert(advertId), shopAPI.getSettings()])
+      .then(([adv, st]) => {
+        setAdvert(adv.data);
+        setSettings(st.data);
+
+        const pm = adv.data.payment_method;
+        const defaultPayment = pm === 'system' ? 'system' : pm === 'offline' ? 'offline' : 'system';
+
+        setForm((f) => ({
+          ...f,
+          payment_method: defaultPayment,
+          customer_name: f.customer_name || user?.full_name || '',
+          customer_email: f.customer_email || user?.email || '',
+          customer_phone: f.customer_phone || user?.phone || '',
+        }));
+      })
+      .catch(() => toast.error('Failed to load advert'))
+      .finally(() => setLoading(false));
+  }, [advertId, user]);
+
+  if (loading) return <div className="flex justify-center py-32"><Spinner size="xl" /></div>;
+  if (!advert) return <div className="container mx-auto p-8"><Card>Product not found</Card></div>;
+
+  const unit = Number(advert.price || 0);
+  const qty = Math.max(1, parseInt(form.quantity) || 1);
+  const subtotal = unit * qty;
+  const fee = form.payment_method === 'system'
+    ? subtotal * (Number(settings.platform_fee_percent || 0) / 100)
+    : 0;
+  const total = subtotal + fee;
+  const currency = advert.currency || settings.default_currency || 'ZMW';
+
+  const canChooseSystem = advert.payment_method === 'system' || advert.payment_method === 'both';
+  const canChooseOffline = advert.payment_method === 'offline' || advert.payment_method === 'both';
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!form.customer_name || !form.customer_email || !form.customer_phone || !form.delivery_address) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await orderAPI.checkout({
+        advert_id: advert.id,
+        quantity: qty,
+        customer_name: form.customer_name,
+        customer_email: form.customer_email,
+        customer_phone: form.customer_phone,
+        delivery_address: form.delivery_address,
+        delivery_notes: form.delivery_notes,
+        payment_method: form.payment_method,
+      });
+      const order = res.data;
+
+      if (form.payment_method === 'system') {
+        navigate(`/pay/${order.order_number}`);
+      } else {
+        navigate(`/order/${order.order_number}`);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Checkout failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <Link to={`/advert/${advert.id}`} className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-faz-orange mb-4">
+        <FaArrowLeft /> Back to product
+      </Link>
+
+      <h1 className="text-3xl font-bold gradient-text mb-6">Checkout</h1>
+
+      <div className="grid md:grid-cols-3 gap-6">
+        <form onSubmit={submit} className="md:col-span-2 space-y-4">
+          <Card padding="lg">
+            <h2 className="font-semibold text-gray-800 mb-3">Delivery Details</h2>
+            <div className="space-y-3">
+              <Input label="Full name" value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} required />
+              <div className="grid md:grid-cols-2 gap-3">
+                <Input type="email" label="Email" value={form.customer_email} onChange={(e) => setForm({ ...form, customer_email: e.target.value })} required />
+                <Input label="Phone" value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} required placeholder="+260..." />
+              </div>
+              <Textarea label="Delivery address" rows={3} value={form.delivery_address} onChange={(e) => setForm({ ...form, delivery_address: e.target.value })} required />
+              <Textarea label="Delivery notes (optional)" rows={2} value={form.delivery_notes} onChange={(e) => setForm({ ...form, delivery_notes: e.target.value })} />
+            </div>
+          </Card>
+
+          <Card padding="lg">
+            <h2 className="font-semibold text-gray-800 mb-3">Payment Method</h2>
+            <div className="space-y-2">
+              {canChooseSystem && (
+                <label className="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-faz-orange transition">
+                  <input type="radio" name="payment_method" checked={form.payment_method === 'system'} onChange={() => setForm({ ...form, payment_method: 'system' })} className="mt-1" />
+                  <div>
+                    <p className="font-medium text-gray-800">Pay via FAZ platform</p>
+                    <p className="text-xs text-gray-500">Secure mobile money payment. A small platform fee ({settings.platform_fee_percent}%) applies.</p>
+                  </div>
+                </label>
+              )}
+              {canChooseOffline && (
+                <label className="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-faz-orange transition">
+                  <input type="radio" name="payment_method" checked={form.payment_method === 'offline'} onChange={() => setForm({ ...form, payment_method: 'offline' })} className="mt-1" />
+                  <div>
+                    <p className="font-medium text-gray-800">Pay vendor directly</p>
+                    <p className="text-xs text-gray-500">Bank or mobile money details will be shown after you place the order.</p>
+                  </div>
+                </label>
+              )}
+            </div>
+          </Card>
+
+          <Button type="submit" size="lg" loading={submitting} className="w-full">
+            Place Order
+          </Button>
+        </form>
+
+        <aside className="md:col-span-1">
+          <Card padding="lg" className="sticky top-24">
+            <h2 className="font-semibold text-gray-800 mb-3">Order Summary</h2>
+            <div className="flex gap-3 mb-3">
+              <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                {advert.cover_image && <img src={resolveImageUrl(advert.cover_image)} alt="" className="w-full h-full object-cover" />}
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-sm text-gray-800 line-clamp-2">{advert.title}</p>
+                <p className="text-xs text-gray-500">{currency} {unit.toFixed(2)}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Quantity</span>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => setForm({ ...form, quantity: Math.max(1, qty - 1) })} className="w-6 h-6 border border-gray-300 rounded">-</button>
+                  <span className="w-6 text-center">{qty}</span>
+                  <button type="button" onClick={() => setForm({ ...form, quantity: qty + 1 })} className="w-6 h-6 border border-gray-300 rounded">+</button>
+                </div>
+              </div>
+              <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span>{currency} {subtotal.toFixed(2)}</span></div>
+              {fee > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Platform fee</span><span className="text-gray-500">{currency} {fee.toFixed(2)}</span></div>}
+              <div className="flex justify-between pt-2 border-t font-bold text-lg">
+                <span>Total</span>
+                <span className="text-faz-green">{currency} {total.toFixed(2)}</span>
+              </div>
+            </div>
+          </Card>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+
+====================================================================================================
+FILE: src\pages\Home.jsx
+====================================================================================================
+
+// src/pages/Home.jsx
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { shopAPI } from '../api';
+import { Card, Spinner, EmptyState } from '../components/ui';
+import { FaArrowRight, FaFire } from 'react-icons/fa';
+import { resolveImageUrl } from '../utils'; // small helper below
+
+const HERO_IMG = 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=1600&q=80';
+
+export default function Home() {
+  const [categories, setCategories] = useState([]);
+  const [featured, setFeatured] = useState([]);
+  const [recent, setRecent] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      shopAPI.listCategories(),
+      shopAPI.listAdverts({ premium: true, limit: 8 }),
+      shopAPI.listAdverts({ limit: 8 }),
+    ]).then(([cats, feat, rec]) => {
+      setCategories(cats.data || []);
+      setFeatured(feat.data?.items || []);
+      setRecent(rec.data?.items || []);
+    }).finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <>
+      {/* HERO */}
+      <section className="relative bg-gray-900 text-white overflow-hidden">
+        <div className="absolute inset-0 opacity-40">
+          <img src={HERO_IMG} alt="" className="w-full h-full object-cover" />
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-br from-faz-green/80 via-faz-black/60 to-faz-orange/80" />
+        <div className="relative container mx-auto px-4 py-24 text-center">
+          <h1 className="text-4xl md:text-6xl font-extrabold mb-4 drop-shadow-lg">
+            Shop Local. <span className="text-faz-orange">Support Football.</span>
+          </h1>
+          <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-8">
+            Discover food, gear, crafts, and services from verified Zambian vendors — for matchday and every day.
+          </p>
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Link to="/browse" className="bg-white text-faz-green font-bold px-8 py-3 rounded-lg hover:bg-faz-orange hover:text-white transition shadow-lg">
+              Start Shopping
+            </Link>
+            <Link to="/browse?premium=true" className="bg-faz-orange text-white font-bold px-8 py-3 rounded-lg hover:bg-red-600 transition shadow-lg flex items-center gap-2">
+              <FaFire /> Featured Deals
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* CATEGORIES */}
+      <section className="container mx-auto px-4 py-12">
+        <div className="flex justify-between items-end mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Shop by Category</h2>
+            <p className="text-sm text-gray-500">Everything you need, from the pitch to the stands.</p>
+          </div>
+        </div>
+        {loading ? <Spinner /> : categories.length === 0 ? (
+          <EmptyState icon="🏷️" title="No categories yet" description="Categories will appear here once the admin adds them." />
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {categories.map((c) => (
+              <Link key={c.id} to={`/browse?category=${c.slug}`}>
+                <Card className="hover:shadow-lg hover:-translate-y-0.5 transition text-center h-full">
+                  <div className="text-4xl mb-2">{c.icon || '🛍️'}</div>
+                  <h3 className="font-semibold text-gray-800">{c.name}</h3>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* FEATURED */}
+      {featured.length > 0 && (
+        <section className="bg-orange-50 py-12">
+          <div className="container mx-auto px-4">
+            <div className="flex justify-between items-end mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                  <FaFire className="text-faz-orange" /> Featured at Matches
+                </h2>
+                <p className="text-sm text-gray-500">Premium vendor placements attached to specific FAZ matches.</p>
+              </div>
+              <Link to="/browse?premium=true" className="text-sm text-faz-orange font-medium hover:underline flex items-center gap-1">
+                See all <FaArrowRight size={10} />
+              </Link>
+            </div>
+            <AdvertGrid adverts={featured} />
+          </div>
+        </section>
+      )}
+
+      {/* RECENT */}
+      <section className="container mx-auto px-4 py-12">
+        <div className="flex justify-between items-end mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">New Arrivals</h2>
+            <p className="text-sm text-gray-500">Fresh products from our vendors.</p>
+          </div>
+          <Link to="/browse" className="text-sm text-faz-orange font-medium hover:underline flex items-center gap-1">
+            Browse all <FaArrowRight size={10} />
+          </Link>
+        </div>
+        {loading ? <Spinner /> : recent.length === 0 ? (
+          <EmptyState icon="📦" title="No products yet" description="Approved adverts will show up here." />
+        ) : (
+          <AdvertGrid adverts={recent} />
+        )}
+      </section>
+    </>
+  );
+}
+
+function AdvertGrid({ adverts }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {adverts.map((a) => (
+        <Link key={a.id} to={`/advert/${a.id}`}>
+          <div className="group bg-white rounded-xl overflow-hidden border border-gray-200 hover:shadow-xl transition h-full flex flex-col">
+            <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
+              {a.cover_image ? (
+                <img src={resolveImageUrl(a.cover_image)} alt={a.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-4xl text-gray-300">🛍️</div>
+              )}
+            </div>
+            <div className="p-4 flex-1 flex flex-col">
+              <h3 className="font-semibold text-gray-800 line-clamp-2 mb-1">{a.title}</h3>
+              {a.vendor?.business_name && (
+                <p className="text-xs text-gray-500 mb-2">{a.vendor.business_name}</p>
+              )}
+              <div className="mt-auto flex justify-between items-center">
+                {a.price != null ? (
+                  <span className="text-lg font-bold text-faz-green">{a.currency} {Number(a.price).toFixed(2)}</span>
+                ) : (
+                  <span className="text-sm text-gray-400 italic">Contact for price</span>
+                )}
+                {a.is_premium && <span className="text-[10px] font-bold bg-faz-orange text-white px-2 py-0.5 rounded-full">PREMIUM</span>}
+              </div>
+            </div>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+
+====================================================================================================
+FILE: src\pages\Login.jsx
+====================================================================================================
+
+// src/pages/Login.jsx
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Card, Button, Input } from '../components/ui';
+
+export default function Login() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const { success } = await login(form.email, form.password);
+    setLoading(false);
+    if (success) navigate('/');
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-20 max-w-md">
+      <Card padding="lg">
+        <h1 className="text-2xl font-bold gradient-text mb-1">Welcome back</h1>
+        <p className="text-sm text-gray-500 mb-6">Sign in to your FAZ account.</p>
+
+        <form onSubmit={submit} className="space-y-4">
+          <Input type="email" label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+          <Input type="password" label="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+          <Button type="submit" size="lg" loading={loading} className="w-full">Sign In</Button>
+        </form>
+
+        <p className="text-sm text-gray-500 mt-4 text-center">
+          Don't have an account? <Link to="/register" className="text-faz-orange font-medium hover:underline">Create one</Link>
+        </p>
+        <p className="text-xs text-gray-400 mt-2 text-center">
+          Same account works across FAZ Tickets and the main website.
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+
+====================================================================================================
+FILE: src\pages\MyOrders.jsx
+====================================================================================================
+
+// src/pages/MyOrders.jsx
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { orderAPI } from '../api';
+import { useAuth } from '../context/AuthContext';
+import { Card, Button, Badge, Spinner, EmptyState } from '../components/ui';
+
+export default function MyOrders() {
+  const { user, loading: authLoading } = useAuth();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) { setLoading(false); return; }
+    orderAPI.listMyOrders()
+      .then((res) => setOrders(res.data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [user, authLoading]);
+
+  if (authLoading || loading) return <div className="flex justify-center py-32"><Spinner size="xl" /></div>;
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-20 max-w-md">
+        <Card padding="lg" className="text-center">
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Log in to see your orders</h2>
+          <p className="text-sm text-gray-500 mb-4">Or browse products without an account.</p>
+          <div className="flex gap-2 justify-center">
+            <Link to="/login"><Button>Login</Button></Link>
+            <Link to="/browse"><Button variant="outline">Browse</Button></Link>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <h1 className="text-3xl font-bold gradient-text mb-6">My Orders</h1>
+
+      {orders.length === 0 ? (
+        <EmptyState icon="📦" title="No orders yet" description="Your purchases will appear here." action={<Link to="/browse"><Button>Start Shopping</Button></Link>} />
+      ) : (
+        <div className="space-y-3">
+          {orders.map((o) => (
+            <Link key={o.id} to={`/order/${o.order_number}`}>
+              <Card padding="md" className="hover:shadow-lg transition">
+                <div className="flex justify-between items-start flex-wrap gap-2">
+                  <div>
+                    <p className="font-mono text-xs text-gray-500">{o.order_number.slice(0, 8)}</p>
+                    <p className="font-semibold text-gray-800">{o.advert?.title}</p>
+                    <p className="text-xs text-gray-500">{new Date(o.created_at).toLocaleDateString()} · {o.currency} {Number(o.total_amount).toFixed(2)}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Badge variant={o.payment_status === 'paid' ? 'success' : 'warning'}>{o.payment_status}</Badge>
+                    <Badge>{o.fulfillment_status}</Badge>
+                  </div>
+                </div>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+====================================================================================================
+FILE: src\pages\OrderTracking.jsx
+====================================================================================================
+
+// src/pages/OrderTracking.jsx
+import { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { orderAPI } from '../api';
+import { Card, Button, Badge, Spinner, EmptyState } from '../components/ui';
+import { useAuth } from '../context/AuthContext';
+import { resolveImageUrl } from '../utils';
+import { FaCheckCircle, FaTruck, FaBox, FaClipboardCheck } from 'react-icons/fa';
+
+export default function OrderTracking() {
+  const { orderNumber } = useParams();
+  const { user } = useAuth();
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [confirming, setConfirming] = useState(false);
+
+  const load = () => {
+    setLoading(true);
+    orderAPI.getByNumber(orderNumber)
+      .then((res) => setOrder(res.data))
+      .catch(() => toast.error('Failed to load order'))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, [orderNumber]);
+
+  const confirmReceipt = async () => {
+    if (!user) {
+      toast.error('Please log in to confirm receipt');
+      return;
+    }
+    if (!confirm('Have you received your order and are you satisfied?')) return;
+    setConfirming(true);
+    try {
+      const res = await orderAPI.confirmReceipt(orderNumber);
+      setOrder(res.data);
+      toast.success('Thanks! Order completed.');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to confirm');
+    } finally { setConfirming(false); }
+  };
+
+  if (loading) return <div className="flex justify-center py-32"><Spinner size="xl" /></div>;
+  if (!order) return <div className="container mx-auto p-8"><EmptyState icon="📦" title="Order not found" /></div>;
+
+  const isPaid = order.payment_status === 'paid';
+  const isOffline = order.payment_method === 'offline';
+  const isComplete = !!order.customer_confirmed_at;
+  const isDelivered = order.fulfillment_status === 'delivered' || order.fulfillment_status === 'completed';
+
+  const advert = order.advert;
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="mb-6">
+        <p className="text-xs text-gray-500">ORDER</p>
+        <h1 className="text-2xl font-bold text-gray-800 font-mono">{order.order_number}</h1>
+        <div className="flex flex-wrap gap-2 mt-2">
+          <Badge variant={isPaid ? 'success' : 'warning'}>Payment: {order.payment_status}</Badge>
+          <Badge variant={isComplete ? 'success' : 'default'}>Fulfillment: {order.fulfillment_status}</Badge>
+          {order.payment_method === 'offline' && <Badge variant="orange">Direct-to-vendor</Badge>}
+        </div>
+      </div>
+
+      {/* OFF-LINE payment banner */}
+      {isOffline && !isComplete && (
+        <Card padding="lg" className="mb-6 border-l-4 border-faz-orange">
+          <h3 className="font-bold text-gray-800 mb-2">Pay the vendor directly</h3>
+          <p className="text-sm text-gray-600 mb-3">
+            Your order is placed. Please pay the vendor to begin fulfillment.
+            Reference <strong>{order.order_number.slice(0, 8)}</strong> when paying.
+          </p>
+          {advert?.vendor && (
+            <div className="text-sm bg-gray-50 p-3 rounded space-y-1">
+              <p className="font-medium">{advert.vendor.business_name}</p>
+              {advert.vendor.bank_name && <p><span className="text-gray-500">Bank:</span> {advert.vendor.bank_name}</p>}
+              {advert.vendor.bank_account_name && <p><span className="text-gray-500">A/C name:</span> {advert.vendor.bank_account_name}</p>}
+              {advert.vendor.bank_account_number && <p><span className="text-gray-500">A/C number:</span> {advert.vendor.bank_account_number}</p>}
+              {advert.vendor.mobile_money_provider && <p><span className="text-gray-500">Mobile:</span> {advert.vendor.mobile_money_provider} — {advert.vendor.mobile_money_number}</p>}
+              {advert.vendor.contact_phone && <p><span className="text-gray-500">Phone:</span> {advert.vendor.contact_phone}</p>}
+              {advert.vendor.offline_instructions && <p className="mt-2 text-gray-700 whitespace-pre-wrap">{advert.vendor.offline_instructions}</p>}
+            </div>
+          )}
+        </Card>
+      )}
+
+      <div className="grid md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 space-y-6">
+          {/* Timeline */}
+          <Card padding="lg">
+            <h2 className="font-bold text-gray-800 mb-4">Tracking Timeline</h2>
+            <div className="space-y-4">
+              {(order.timeline || []).map((t) => (
+                <div key={t.id} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className="w-3 h-3 rounded-full bg-faz-orange" />
+                    <div className="w-px flex-1 bg-gray-200 my-1" />
+                  </div>
+                  <div className="flex-1 pb-4">
+                    <p className="font-medium text-gray-800 capitalize">{t.status.replace(/_/g, ' ')}</p>
+                    {t.note && <p className="text-sm text-gray-600">{t.note}</p>}
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {new Date(t.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {isDelivered && !isComplete && (
+              <div className="mt-4 pt-4 border-t">
+                <Button onClick={confirmReceipt} loading={confirming} className="w-full" size="lg">
+                  <FaCheckCircle /> Confirm Receipt
+                </Button>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  Confirm only after you've received the item.
+                </p>
+              </div>
+            )}
+
+            {isComplete && (
+              <div className="mt-4 pt-4 border-t bg-green-50 rounded-lg p-4 text-center">
+                <FaCheckCircle className="text-green-600 text-3xl mx-auto mb-2" />
+                <p className="font-semibold text-green-800">Order completed</p>
+                <p className="text-xs text-green-700">Thanks for shopping with FAZ!</p>
+              </div>
+            )}
+          </Card>
+
+          {/* Delivery */}
+          <Card padding="lg">
+            <h2 className="font-bold text-gray-800 mb-3">Delivery</h2>
+            <p className="text-sm"><span className="text-gray-500">Name:</span> {order.customer_name}</p>
+            <p className="text-sm"><span className="text-gray-500">Phone:</span> {order.customer_phone}</p>
+            <p className="text-sm"><span className="text-gray-500">Address:</span> {order.delivery_address}</p>
+            {order.delivery_notes && <p className="text-sm"><span className="text-gray-500">Notes:</span> {order.delivery_notes}</p>}
+            {order.courier_name && <p className="text-sm mt-2"><FaTruck className="inline mr-1 text-faz-orange" /> {order.courier_name} {order.tracking_number && `— ${order.tracking_number}`}</p>}
+          </Card>
+        </div>
+
+        <aside>
+          <Card padding="lg">
+            <h2 className="font-bold text-gray-800 mb-3">Order Summary</h2>
+            {advert && (
+              <div className="flex gap-3 mb-3 pb-3 border-b">
+                <div className="w-14 h-14 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                  {advert.cover_image && <img src={resolveImageUrl(advert.cover_image)} alt="" className="w-full h-full object-cover" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <Link to={`/advert/${advert.id}`} className="text-sm font-medium hover:text-faz-orange line-clamp-2">{advert.title}</Link>
+                  <p className="text-xs text-gray-500">×{order.quantity}</p>
+                </div>
+              </div>
+            )}
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span>{order.currency} {Number(order.subtotal).toFixed(2)}</span></div>
+              {Number(order.admin_fee) > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Platform fee</span><span className="text-gray-500">{order.currency} {Number(order.admin_fee).toFixed(2)}</span></div>}
+              <div className="flex justify-between pt-2 border-t font-bold"><span>Total</span><span className="text-faz-green">{order.currency} {Number(order.total_amount).toFixed(2)}</span></div>
+            </div>
+          </Card>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+
+====================================================================================================
+FILE: src\pages\PaymentPage.jsx
+====================================================================================================
+
+// src/pages/PaymentPage.jsx
+import { useEffect, useRef, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { orderAPI } from '../api';
+import { Card, Button, Input, Spinner, Badge } from '../components/ui';
+
+import airtelLogo from './assets/momo/logos/momo_airtel.png'
+import mtnLogo from './assets/momo/logos/momo_mtn.png'
+import zamtelLogo from './assets/momo/logos/momo_zamtel.jpg'
+
+const providerLogos = {
+  'AIRTEL_OAPI_ZMB': airtelLogo,
+  'MTN_MOMO_ZMB': mtnLogo,
+  'ZAMTEL_ZMB': zamtelLogo,
+}
+
+const PROVIDER_NAMES = {
+  'AIRTEL_OAPI_ZMB': 'Airtel Money',
+  'MTN_MOMO_ZMB': 'MTN Mobile Money',
+  'ZAMTEL_ZMB': 'Zamtel Money',
+};
+
+export default function PaymentPage() {
+  const { orderNumber } = useParams();
+  const navigate = useNavigate();
+  const pollRef = useRef(null);
+
+  const [order, setOrder] = useState(null);
+  const [providers, setProviders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [status, setStatus] = useState(null); // 'WAITING' | 'COMPLETED' | 'FAILED'
+  const [error, setError] = useState('');
+
+  const [provider, setProvider] = useState('');
+  const [phone, setPhone] = useState('');
+
+  useEffect(() => {
+    Promise.all([orderAPI.getByNumber(orderNumber), orderAPI.getProviders()])
+      .then(([ord, prov]) => {
+        setOrder(ord.data);
+        setProviders(prov.data || []);
+        if (ord.data.payment_status === 'paid') {
+          setStatus('COMPLETED');
+        }
+      })
+      .catch(() => { setError('Order not found'); })
+      .finally(() => setLoading(false));
+    return () => pollRef.current && clearInterval(pollRef.current);
+  }, [orderNumber]);
+
+  const isValidPhone = /^0\d{9}$/.test(phone);
+
+  const startPolling = (depositId) => {
+    setStatus('WAITING');
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await orderAPI.checkStatus(depositId);
+        if (res.data.status === 'COMPLETED') {
+          clearInterval(pollRef.current);
+          setStatus('COMPLETED');
+          toast.success('Payment successful!');
+          setTimeout(() => navigate(`/order/${orderNumber}`), 1500);
+        } else if (res.data.success === false) {
+          clearInterval(pollRef.current);
+          setStatus('FAILED');
+          setError(res.data.failureReason?.failureMessage || 'Payment failed');
+        }
+      } catch {
+        clearInterval(pollRef.current);
+        setStatus('FAILED');
+        setError('Failed to verify payment');
+      }
+    }, 5000);
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!provider) { toast.error('Select a provider'); return; }
+    if (!isValidPhone) { toast.error('Enter a valid 10-digit phone number'); return; }
+
+    setProcessing(true);
+    setError('');
+    try {
+      const res = await orderAPI.initiatePayment({
+        target: 'order',
+        target_id: orderNumber,
+        provider,
+        phone_number: '26' + phone,
+        amount: String(order.total_amount),
+        customer_email: order.customer_email,
+      });
+      if (res.data.success) {
+        toast.success('Payment request sent. Approve on your phone.');
+        startPolling(res.data.depositId);
+      } else {
+        setStatus('FAILED');
+        setError(res.data.failureReason?.failureMessage || 'Payment failed');
+      }
+    } catch (err) {
+      setStatus('FAILED');
+      setError(err.response?.data?.error || 'Payment failed');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  if (loading) return <div className="flex justify-center py-32"><Spinner size="xl" /></div>;
+  if (!order) return <div className="container mx-auto p-8"><Card>{error || 'Order not found'}</Card></div>;
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-xl">
+      <h1 className="text-3xl font-bold gradient-text mb-6">Complete Payment</h1>
+
+      <Card padding="lg">
+        <div className="mb-4 pb-4 border-b">
+          <p className="text-xs text-gray-500">Order</p>
+          <p className="font-mono text-sm">{order.order_number.slice(0, 8)}</p>
+          <p className="text-3xl font-bold text-faz-green mt-2">{order.currency} {Number(order.total_amount).toFixed(2)}</p>
+        </div>
+
+        {status === 'WAITING' && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
+            <Spinner className="mx-auto mb-3" size="lg" />
+            <h3 className="text-lg font-bold text-blue-800">Waiting for approval…</h3>
+            <p className="text-sm text-blue-600">Check your phone and enter your Mobile Money PIN.</p>
+          </div>
+        )}
+
+        {status === 'COMPLETED' && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+            <span className="text-4xl">✅</span>
+            <h3 className="text-lg font-bold text-green-800 mt-2">Payment complete!</h3>
+            <p className="text-sm text-green-600">Redirecting to your order…</p>
+          </div>
+        )}
+
+        {status === 'FAILED' && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+            <span className="text-4xl">❌</span>
+            <h3 className="text-lg font-bold text-red-800 mt-2">Payment failed</h3>
+            <p className="text-sm text-red-600">{error}</p>
+            <Button variant="outline" className="mt-3" onClick={() => { setStatus(null); setError(''); }}>
+              Try again
+            </Button>
+          </div>
+        )}
+
+        {!status && (
+          <form onSubmit={submit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Provider</label>
+              <div className="grid grid-cols-3 gap-2">
+                {providers.map((p) => (
+                  <button key={p.provider} type="button" disabled={!p.deposit_operational}
+                    onClick={() => setProvider(p.provider)}
+                    className={`p-3 border-2 rounded-lg text-center transition ${
+                      !p.deposit_operational ? 'opacity-40 cursor-not-allowed border-gray-200' :
+                      provider === p.provider ? 'border-faz-orange bg-orange-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}>
+                    <img
+                          src={providerLogos[p.provider] || '📱'}
+                          alt={PROVIDER_NAMES[p.provider] || p.provider}
+                          className="w-30 h-10 object-contain"
+                        />
+                    <p className="text-xs font-medium">{PROVIDER_NAMES[p.provider] || p.provider}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Input label="Mobile Money Phone Number" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="0xxxxxxxxx" inputMode="numeric" required />
+
+            <Button type="submit" size="lg" loading={processing} disabled={!isValidPhone || !provider} className="w-full">
+              Pay {order.currency} {Number(order.total_amount).toFixed(2)}
+            </Button>
+          </form>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+
+====================================================================================================
+FILE: src\pages\Register.jsx
+====================================================================================================
+
+// src/pages/Register.jsx
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Card, Button, Input } from '../components/ui';
+
+export default function Register() {
+  const { register } = useAuth();
+  const navigate = useNavigate();
+  const [form, setForm] = useState({
+    first_name: '', last_name: '', email: '', phone: '', password: '',
+  });
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const { success } = await register({
+      ...form,
+      full_name: `${form.first_name} ${form.last_name}`.trim(),
+      role: 'customer',
+    });
+    setLoading(false);
+    if (success) navigate('/');
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-20 max-w-md">
+      <Card padding="lg">
+        <h1 className="text-2xl font-bold gradient-text mb-1">Create an account</h1>
+        <p className="text-sm text-gray-500 mb-6">Shop, track orders, and pay securely.</p>
+
+        <form onSubmit={submit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="First name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} required />
+            <Input label="Last name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} required />
+          </div>
+          <Input type="email" label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+          <Input label="Phone (optional)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+260..." />
+          <Input type="password" label="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={6} />
+          <Button type="submit" size="lg" loading={loading} className="w-full">Create Account</Button>
+        </form>
+
+        <p className="text-sm text-gray-500 mt-4 text-center">
+          Already have one? <Link to="/login" className="text-faz-orange font-medium hover:underline">Sign in</Link>
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+
+====================================================================================================
+FILE: src\pages\VendorPage.jsx
+====================================================================================================
+
+// src/pages/VendorPage.jsx
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { shopAPI } from '../api';
+import { Card, Button, Badge, Spinner, EmptyState } from '../components/ui';
+import { resolveImageUrl } from '../utils';
+import {
+  FaMapMarkerAlt, FaPhone, FaEnvelope, FaWhatsapp,
+  FaGlobe, FaArrowLeft, FaStore,
+} from 'react-icons/fa';
+
+export default function VendorPage() {
+  const { vendorId } = useParams();
+  const [vendor, setVendor] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    shopAPI.getVendor(vendorId)
+      .then((res) => setVendor(res.data))
+      .catch(() => setVendor(null))
+      .finally(() => setLoading(false));
+  }, [vendorId]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-32">
+        <Spinner size="xl" />
+      </div>
+    );
+  }
+
+  if (!vendor) {
+    return (
+      <div className="container mx-auto px-4 py-20">
+        <EmptyState
+          icon="🏪"
+          title="Vendor not found"
+          description="This vendor may not exist or is not currently active."
+          action={
+            <Link to="/browse">
+              <Button>Browse all products</Button>
+            </Link>
+          }
+        />
+      </div>
+    );
+  }
+
+  const adverts = vendor.adverts || [];
+  const hasCoords =
+    vendor.latitude != null && vendor.longitude != null;
+  const mapsUrl = hasCoords
+    ? `https://www.google.com/maps/search/?api=1&query=${vendor.latitude},${vendor.longitude}`
+    : vendor.location_name
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(vendor.location_name)}`
+      : null;
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <Link
+        to="/browse"
+        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-faz-orange mb-4"
+      >
+        <FaArrowLeft /> Back to browse
+      </Link>
+
+      {/* Banner */}
+      <div className="relative rounded-2xl overflow-hidden mb-6 bg-gradient-to-br from-faz-green via-faz-orange to-faz-red">
+        {vendor.banner_url && (
+          <img
+            src={resolveImageUrl(vendor.banner_url)}
+            alt={vendor.business_name}
+            className="absolute inset-0 w-full h-full object-cover opacity-60"
+          />
+        )}
+        <div className="relative px-6 py-12 md:py-16 text-white">
+          <div className="flex flex-col md:flex-row md:items-end gap-4">
+            <div className="w-24 h-24 rounded-2xl bg-white shadow-xl overflow-hidden flex items-center justify-center flex-shrink-0 border-4 border-white">
+              {vendor.logo_url ? (
+                <img
+                  src={resolveImageUrl(vendor.logo_url)}
+                  alt={vendor.business_name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <FaStore className="text-faz-orange text-4xl" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <Badge variant="success" className="mb-2">
+                Verified FAZ Vendor
+              </Badge>
+              <h1 className="text-3xl md:text-4xl font-bold drop-shadow-lg">
+                {vendor.business_name}
+              </h1>
+              {vendor.location_name && (
+                <p className="text-sm text-white/90 mt-1 flex items-center gap-1">
+                  <FaMapMarkerAlt /> {vendor.location_name}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Left: about + contact */}
+        <aside className="lg:col-span-1 space-y-4">
+          <Card padding="lg">
+            <h2 className="font-bold text-gray-800 mb-3">About</h2>
+            {vendor.description ? (
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                {vendor.description}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-400 italic">
+                No description provided.
+              </p>
+            )}
+
+            <div className="mt-4 pt-4 border-t space-y-2 text-sm">
+              {vendor.contact_phone && (
+                <a
+                  href={`tel:${vendor.contact_phone}`}
+                  className="flex items-center gap-2 text-gray-700 hover:text-faz-orange transition"
+                >
+                  <FaPhone className="text-faz-orange" />
+                  {vendor.contact_phone}
+                </a>
+              )}
+              {vendor.contact_email && (
+                <a
+                  href={`mailto:${vendor.contact_email}`}
+                  className="flex items-center gap-2 text-gray-700 hover:text-faz-orange transition"
+                >
+                  <FaEnvelope className="text-faz-orange" />
+                  {vendor.contact_email}
+                </a>
+              )}
+              {vendor.contact_whatsapp && (
+                <a
+                  href={`https://wa.me/${vendor.contact_whatsapp.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-gray-700 hover:text-green-600 transition"
+                >
+                  <FaWhatsapp className="text-green-600" />
+                  WhatsApp
+                </a>
+              )}
+              {vendor.website_url && (
+                <a
+                  href={vendor.website_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-gray-700 hover:text-faz-orange transition"
+                >
+                  <FaGlobe className="text-faz-orange" />
+                  Visit website
+                </a>
+              )}
+              {mapsUrl && (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-gray-700 hover:text-faz-orange transition"
+                >
+                  <FaMapMarkerAlt className="text-faz-orange" />
+                  {vendor.location_name || 'View on map'}
+                </a>
+              )}
+            </div>
+          </Card>
+
+          <Card padding="md" className="text-center">
+            <p className="text-3xl font-bold gradient-text">{adverts.length}</p>
+            <p className="text-sm text-gray-500">
+              {adverts.length === 1 ? 'product' : 'products'} available
+            </p>
+          </Card>
+        </aside>
+
+        {/* Right: advert grid */}
+        <div className="lg:col-span-2">
+          <div className="mb-4">
+            <h2 className="text-xl font-bold text-gray-800">
+              Products from {vendor.business_name}
+            </h2>
+            <p className="text-sm text-gray-500">
+              Everything this vendor is selling on FAZ Shop.
+            </p>
+          </div>
+
+          {adverts.length === 0 ? (
+            <EmptyState
+              icon="📦"
+              title="No products yet"
+              description="This vendor hasn't published any products."
+            />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {adverts.map((a) => (
+                <Link key={a.id} to={`/advert/${a.id}`}>
+                  <div className="group bg-white rounded-xl overflow-hidden border border-gray-200 hover:shadow-xl transition h-full flex flex-col">
+                    <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
+                      {a.cover_image ? (
+                        <img
+                          src={resolveImageUrl(a.cover_image)}
+                          alt={a.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-4xl text-gray-300">
+                          🛍️
+                        </div>
+                      )}
+                      {a.is_premium && (
+                        <span className="absolute top-2 left-2 bg-faz-orange text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                          Premium
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-4 flex-1 flex flex-col">
+                      <h3 className="font-semibold text-gray-800 line-clamp-2 mb-1">
+                        {a.title}
+                      </h3>
+                      {a.location_name && (
+                        <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
+                          📍 {a.location_name}
+                        </p>
+                      )}
+                      <div className="mt-auto flex justify-between items-center">
+                        {a.price != null ? (
+                          <span className="text-lg font-bold text-faz-green">
+                            {a.currency} {Number(a.price).toFixed(2)}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-400 italic">
+                            Contact for price
+                          </span>
+                        )}
+                        <span className="text-sm text-faz-orange font-medium group-hover:underline">
+                          View →
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
